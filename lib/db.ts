@@ -1,12 +1,9 @@
-import { neon } from "@neondatabase/serverless";
+import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL environment variable is not set");
+let _sql: NeonQueryFunction<false, false> | null = null;
+
+export function getDb(): NeonQueryFunction<false, false> | null {
+  if (!process.env.DATABASE_URL) return null;
+  if (!_sql) _sql = neon(process.env.DATABASE_URL);
+  return _sql;
 }
-
-/**
- * Neon serverless SQL client.
- * Re-using the same connection per function invocation is intentional –
- * Neon's driver handles connection pooling transparently.
- */
-export const sql = neon(process.env.DATABASE_URL);
