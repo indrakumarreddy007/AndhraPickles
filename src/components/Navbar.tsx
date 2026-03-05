@@ -1,11 +1,19 @@
 import { motion } from "motion/react";
 import { ShoppingBag, User, Search, Menu } from "lucide-react";
 
+interface NavbarProps {
+  cartCount: number;
+  onOpenCart: () => void;
+  onOpenProfile: () => void;
+  onOpenSearch: () => void;
+  onOpenMobileMenu: () => void;
+}
+
 function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 }
 
-export default function Navbar() {
+export default function Navbar({ cartCount, onOpenCart, onOpenProfile, onOpenSearch, onOpenMobileMenu }: NavbarProps) {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 liquid-glass border-b border-black/5">
       <div className="flex items-center gap-8">
@@ -27,29 +35,42 @@ export default function Navbar() {
 
       <div className="flex items-center gap-5">
         <button
-          onClick={() => scrollTo("products")}
+          onClick={onOpenSearch}
           className="p-2 hover:bg-black/5 rounded-full transition-colors"
-          title="Search products"
+          title="Search"
         >
           <Search size={20} />
         </button>
+
         <button
+          onClick={onOpenProfile}
           className="p-2 hover:bg-black/5 rounded-full transition-colors"
-          title="Account"
+          title="Profile"
         >
           <User size={20} />
         </button>
+
         <button
-          onClick={() => scrollTo("products")}
+          onClick={onOpenCart}
           className="p-2 hover:bg-black/5 rounded-full transition-colors relative"
           title="Cart"
         >
           <ShoppingBag size={20} />
-          <span className="absolute top-0 right-0 w-4 h-4 bg-spice-hot text-white text-[10px] flex items-center justify-center rounded-full">5</span>
+          {cartCount > 0 && (
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute top-0 right-0 w-4 h-4 bg-spice-hot text-white text-[10px] flex items-center justify-center rounded-full font-bold"
+            >
+              {cartCount}
+            </motion.span>
+          )}
         </button>
+
         <button
           className="md:hidden p-2 hover:bg-black/5 rounded-full transition-colors"
-          onClick={() => scrollTo("products")}
+          onClick={onOpenMobileMenu}
+          title="Menu"
         >
           <Menu size={20} />
         </button>

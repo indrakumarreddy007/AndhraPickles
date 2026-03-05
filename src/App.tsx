@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import ProductCard from "./components/ProductCard";
 import SpiceSlider from "./components/SpiceSlider";
 import IngredientsSection from "./components/IngredientsSection";
-import { Plus, X, Shield, ShieldOff } from "lucide-react";
+import CartSidebar, { CartItem } from "./components/CartSidebar";
+import ProfileModal from "./components/ProfileModal";
+import SearchModal from "./components/SearchModal";
+import MobileMenu from "./components/MobileMenu";
+import { Plus, X, Shield, ShieldOff, ShoppingCart } from "lucide-react";
 
 interface Product {
   id: number;
@@ -17,45 +21,81 @@ interface Product {
 }
 
 export default function App() {
+  // ── Products & admin ────────────────────────────────────────────
   const [products, setProducts] = useState<Product[]>([]);
   const [spiceLevel, setSpiceLevel] = useState(2);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newProduct, setNewProduct] = useState({
-    name: "",
-    price: "$",
-    image: "",
-    spiceLevel: 2,
-    tag: "New Arrival"
+    name: "", price: "$", image: "", spiceLevel: 2, tag: "New Arrival",
   });
 
-  // Newsletter
+  // ── Cart ────────────────────────────────────────────────────────
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [showCart, setShowCart] = useState(false);
+  const [addedToast, setAddedToast] = useState("");
+
+  // ── Panels ──────────────────────────────────────────────────────
+  const [showProfile, setShowProfile] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+  // ── Newsletter ──────────────────────────────────────────────────
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterStatus, setNewsletterStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [newsletterMsg, setNewsletterMsg] = useState("");
 
   const spiceColors = ["#EAB308", "#F97316", "#DC2626", "#7F1D1D"];
 
+  useEffect(() => { fetchProducts(); }, []);
   useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.style.setProperty('--color-spice-hot', spiceColors[spiceLevel]);
+    document.documentElement.style.setProperty("--color-spice-hot", spiceColors[spiceLevel]);
   }, [spiceLevel]);
 
   const fetchProducts = async () => {
-    const res = await fetch("/api/products");
-    const data = await res.json();
-    setProducts(data);
+    try {
+      const res = await fetch("/api/products");
+      const data = await res.json();
+      setProducts(Array.isArray(data) ? data : []);
+    } catch { setProducts([]); }
   };
 
+  // ── Cart handlers ────────────────────────────────────────────────
+  const handleAddToCart = useCallback((product: Product) => {
+    setCartItems(prev => {
+      const exists = prev.find(i => i.id === product.id);
+      if (exists) {
+        return prev.map(i => i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
+      }
+      return [...prev, { ...product, quantity: 1 }];
+    });
+    setAddedToast(product.name);
+    setTimeout(() => setAddedToast(""), 2500);
+  }, []);
+
+  const handleUpdateQty = useCallback((id: number, delta: number) => {
+    setCartItems(prev =>
+      prev.flatMap(i => {
+        if (i.id !== id) return [i];
+        const next = i.quantity + delta;
+        return next <= 0 ? [] : [{ ...i, quantity: next }];
+      })
+    );
+  }, []);
+
+  const handleRemoveFromCart = useCallback((id: number) => {
+    setCartItems(prev => prev.filter(i => i.id !== id));
+  }, []);
+
+  const cartCount = cartItems.reduce((s, i) => s + i.quantity, 0);
+
+  // ── Admin handlers ───────────────────────────────────────────────
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     const res = await fetch("/api/products", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newProduct)
+      body: JSON.stringify(newProduct),
     });
     if (res.ok) {
       setShowAddModal(false);
@@ -71,6 +111,7 @@ export default function App() {
     }
   };
 
+  // ── Newsletter ───────────────────────────────────────────────────
   const handleNewsletter = async (e: React.FormEvent) => {
     e.preventDefault();
     setNewsletterStatus("loading");
@@ -97,7 +138,46 @@ export default function App() {
 
   return (
     <div className="min-h-screen selection:bg-spice-hot selection:text-white">
-      <Navbar />
+      {/* ── Navbar ── */}
+      <Navbar
+        cartCount={cartCount}
+        onOpenCart={() => setShowCart(true)}
+        onOpenProfile={() => setShowProfile(true)}
+        onOpenSearch={() => setShowSearch(true)}
+        onOpenMobileMenu={() => setShowMobileMenu(true)}
+      />
+
+      {/* ── Panels ── */}
+      <CartSidebar
+        isOpen={showCart}
+        onClose={() => setShowCart(false)}
+        items={cartItems}
+        onUpdateQty={handleUpdateQty}
+        onRemove={handleRemoveFromCart}
+      />
+      <ProfileModal isOpen={showProfile} onClose={() => setShowProfile(false)} />
+      <SearchModal
+        isOpen={showSearch}
+        onClose={() => setShowSearch(false)}
+        products={products}
+        onAddToCart={handleAddToCart}
+      />
+      <MobileMenu isOpen={showMobileMenu} onClose={() => setShowMobileMenu(false)} />
+
+      {/* ── Add-to-cart toast ── */}
+      <AnimatePresence>
+        {addedToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 60, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 60, scale: 0.9 }}
+            className="fixed bottom-28 right-8 z-[90] flex items-center gap-3 bg-zinc-900 text-white px-5 py-3 rounded-2xl shadow-2xl"
+          >
+            <ShoppingCart size={16} className="text-spice-hot" />
+            <span className="text-sm font-medium"><strong>{addedToast}</strong> added to cart!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <main>
         <Hero />
@@ -116,7 +196,7 @@ export default function App() {
           )}
           <button
             onClick={() => setIsAdmin(!isAdmin)}
-            className={`p-4 rounded-full shadow-2xl transition-all ${isAdmin ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-900'}`}
+            className={`p-4 rounded-full shadow-2xl transition-all ${isAdmin ? "bg-zinc-900 text-white" : "bg-white text-zinc-900"}`}
           >
             {isAdmin ? <Shield size={24} /> : <ShieldOff size={24} />}
           </button>
@@ -127,9 +207,7 @@ export default function App() {
           {showAddModal && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center px-6">
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 onClick={() => setShowAddModal(false)}
                 className="absolute inset-0 bg-black/60 backdrop-blur-sm"
               />
@@ -175,7 +253,7 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        {/* Spice Selection Section */}
+        {/* Spice Slider */}
         <section className="container mx-auto px-6 mb-24">
           <SpiceSlider level={spiceLevel} onChange={setSpiceLevel} />
         </section>
@@ -189,13 +267,11 @@ export default function App() {
             </div>
             {isAdmin && <span className="text-spice-hot font-bold animate-pulse">ADMIN MODE ACTIVE</span>}
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8">
             <AnimatePresence mode="popLayout">
-              {products.filter(p => p.spiceLevel <= spiceLevel + 1).map((product) => (
+              {products.filter(p => p.spiceLevel <= spiceLevel + 1).map(product => (
                 <motion.div
-                  key={product.id}
-                  layout
+                  key={product.id} layout
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
@@ -205,6 +281,7 @@ export default function App() {
                     {...product}
                     isAdmin={isAdmin}
                     onDelete={handleDeleteProduct}
+                    onAddToCart={() => handleAddToCart(product)}
                   />
                 </motion.div>
               ))}
@@ -216,15 +293,11 @@ export default function App() {
           <IngredientsSection />
         </div>
 
-        {/* Newsletter / CTA */}
+        {/* Newsletter */}
         <section id="newsletter" className="py-32 relative overflow-hidden">
           <div className="absolute inset-0 bg-spice-hot/5 -z-10" />
           <div className="container mx-auto px-6 text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-            >
+            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
               <h2 className="text-6xl md:text-8xl font-bold mb-8">
                 JOIN THE <br />
                 <span className="text-spice-hot italic">SPICE CLUB</span>
@@ -239,16 +312,13 @@ export default function App() {
               ) : (
                 <form onSubmit={handleNewsletter} className="flex flex-col md:flex-row gap-4 justify-center max-w-md mx-auto">
                   <input
-                    type="email"
-                    required
-                    value={newsletterEmail}
+                    type="email" required value={newsletterEmail}
                     onChange={e => setNewsletterEmail(e.target.value)}
                     placeholder="Enter your email"
                     className="flex-1 px-8 py-4 rounded-full bg-white border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-spice-hot transition-all"
                   />
                   <button
-                    type="submit"
-                    disabled={newsletterStatus === "loading"}
+                    type="submit" disabled={newsletterStatus === "loading"}
                     className="px-8 py-4 bg-zinc-900 text-white rounded-full font-bold hover:bg-spice-hot transition-colors shadow-xl disabled:opacity-60"
                   >
                     {newsletterStatus === "loading" ? "SUBSCRIBING…" : "SUBSCRIBE"}
@@ -267,14 +337,12 @@ export default function App() {
               ANDHRA <span className="text-zinc-900">PICKLES</span>
             </div>
             <div className="flex gap-8 text-xs font-bold uppercase tracking-widest text-zinc-400">
-              <a href="#" className="hover:text-zinc-900">Privacy</a>
-              <a href="#" className="hover:text-zinc-900">Terms</a>
-              <a href="#" className="hover:text-zinc-900">Shipping</a>
-              <a href="#" className="hover:text-zinc-900">Contact</a>
+              <button onClick={() => { }} className="hover:text-zinc-900 transition-colors">Privacy</button>
+              <button onClick={() => { }} className="hover:text-zinc-900 transition-colors">Terms</button>
+              <button onClick={() => { }} className="hover:text-zinc-900 transition-colors">Shipping</button>
+              <button onClick={() => { }} className="hover:text-zinc-900 transition-colors">Contact</button>
             </div>
-            <div className="text-zinc-400 text-xs">
-              © 2024 Andhra Pickles. All rights reserved.
-            </div>
+            <div className="text-zinc-400 text-xs">© 2026 Andhra Pickles. All rights reserved.</div>
           </div>
         </div>
       </footer>
