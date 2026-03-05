@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getDb } from "../lib/db";
+import { neon } from "@neondatabase/serverless";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -14,17 +14,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!email || typeof email !== "string" || !email.includes("@")) {
             return res.status(400).json({ error: "A valid email address is required." });
         }
-
         const normalised = email.trim().toLowerCase();
-        const sql = getDb();
 
-        if (!sql) {
-            // DB not configured — still acknowledge gracefully
-            return res.status(201).json({
-                message: "Welcome to the Spice Club! 🌶️ Check your inbox for 15% off.",
-            });
+        if (!process.env.DATABASE_URL) {
+            return res.status(201).json({ message: "Welcome to the Spice Club! 🌶️ Check your inbox for 15% off." });
         }
 
+        const sql = neon(process.env.DATABASE_URL);
         const [subscriber] = await sql`
       INSERT INTO newsletter_subscribers (email)
       VALUES (${normalised})

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getDb } from "../../lib/db";
+import { neon } from "@neondatabase/serverless";
 
 const FALLBACK_PRODUCTS = [
     { id: 1, name: "Chicken Pickle", price: "$18.99", image: "/images/chicken_pickle.png", spiceLevel: 3, tag: "Non-Veg Special" },
@@ -16,45 +16,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (req.method === "OPTIONS") return res.status(204).end();
 
-    const sql = getDb();
-
-    try {
-        // ── GET ──────────────────────────────────────────────────────────
-        if (req.method === "GET") {
-            if (!sql) {
-                return res.status(200).json(FALLBACK_PRODUCTS);
-            }
+    // ── GET ──────────────────────────────────────────────────────────
+    if (req.method === "GET") {
+        if (!process.env.DATABASE_URL) {
+            return res.status(200).json(FALLBACK_PRODUCTS);
+        }
+        try {
+            const sql = neon(process.env.DATABASE_URL);
             const products = await sql`
-        SELECT id, name, price, image, "spiceLevel", tag
-        FROM products ORDER BY id ASC
+        SELECT id, name, price, image, "spiceLevel", tag FROM products ORDER BY id ASC
       `;
             return res.status(200).json(products.length > 0 ? products : FALLBACK_PRODUCTS);
+        } catch (err) {
+            console.error("[api/products GET]", err);
+            return res.status(200).json(FALLBACK_PRODUCTS);
         }
+    }
 
-        // ── POST ─────────────────────────────────────────────────────────
-        if (req.method === "POST") {
-            const { name, price, image, spiceLevel, tag } = req.body ?? {};
-            if (!name || !price || !image || spiceLevel == null || !tag) {
-                return res.status(400).json({ error: "All fields are required." });
-            }
-            const level = parseInt(spiceLevel, 10);
-            if (isNaN(level) || level < 1 || level > 3) {
-                return res.status(400).json({ error: "spiceLevel must be 1, 2, or 3." });
-            }
-            if (!sql) return res.status(503).json({ error: "Database not configured." });
+    // ── POST ─────────────────────────────────────────────────────────
+    if (req.method === "POST") {
+        const { name, price, image, spiceLevel, tag } = req.body ?? {};
+        if (!name || !price || !image || spiceLevel == null || !tag) {
+            return res.status(400).json({ error: "All fields are required." });
+        }
+        const level = parseInt(spiceLevel, 10);
+        if (isNaN(level) || level < 1 || level > 3) {
+            return res.status(400).json({ error: "spiceLevel must be 1, 2, or 3." });
+        }
+        if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Database not configured." });
 
+        try {
+            const sql = neon(process.env.DATABASE_URL);
             const [product] = await sql`
         INSERT INTO products (name, price, image, "spiceLevel", tag)
         VALUES (${name}, ${price}, ${image}, ${level}, ${tag})
         RETURNING id, name, price, image, "spiceLevel", tag
       `;
             return res.status(201).json(product);
+        } catch (err) {
+            console.error("[api/products POST]", err);
+            return res.status(500).json({ error: "Internal server error." });
         }
-
-        return res.status(405).json({ error: "Method not allowed." });
-    } catch (err) {
-        console.error("[api/products]", err);
-        if (req.method === "GET") return res.status(200).json(FALLBACK_PRODUCTS);
-        return res.status(500).json({ error: "Internal server error." });
     }
+
+    return res.status(405).json({ error: "Method not allowed." });
 }

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getDb } from "../../lib/db";
+import { neon } from "@neondatabase/serverless";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -10,9 +10,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const id = Number(req.query.id);
     if (!id || isNaN(id)) return res.status(400).json({ error: "Invalid product id." });
+    if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Database not configured." });
 
-    const sql = getDb();
-    if (!sql) return res.status(503).json({ error: "Database not configured." });
+    const sql = neon(process.env.DATABASE_URL);
 
     try {
         if (req.method === "GET") {
