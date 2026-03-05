@@ -181,7 +181,7 @@ export default function App() {
         </section>
 
         {/* Products Grid */}
-        <section className="container mx-auto px-6 mb-32">
+        <section id="products" className="container mx-auto px-6 mb-32">
           <div className="flex justify-between items-end mb-12">
             <div>
               <h2 className="text-5xl font-serif font-bold mb-4">OUR SIGNATURE <span className="italic">COLLECTION</span></h2>
@@ -212,10 +212,12 @@ export default function App() {
           </div>
         </section>
 
-        <IngredientsSection />
+        <div id="ingredients">
+          <IngredientsSection />
+        </div>
 
         {/* Newsletter / CTA */}
-        <section className="py-32 relative overflow-hidden">
+        <section id="newsletter" className="py-32 relative overflow-hidden">
           <div className="absolute inset-0 bg-spice-hot/5 -z-10" />
           <div className="container mx-auto px-6 text-center">
             <motion.div

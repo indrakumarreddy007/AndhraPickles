@@ -1,6 +1,10 @@
 import { motion, useScroll, useTransform } from "motion/react";
 import { useRef } from "react";
 
+function scrollTo(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+}
+
 export default function Hero() {
   const containerRef = useRef(null);
   const { scrollYProgress } = useScroll({
@@ -15,13 +19,13 @@ export default function Hero() {
   return (
     <section ref={containerRef} className="relative h-screen flex items-center justify-center overflow-hidden pt-20">
       {/* Background Parallax Image */}
-      <motion.div 
+      <motion.div
         style={{ y, scale }}
         className="absolute inset-0 z-0"
       >
-        <img 
-          src="https://images.unsplash.com/photo-1596040033229-a9821ebd058d?q=80&w=2070&auto=format&fit=crop" 
-          alt="Spices background" 
+        <img
+          src="https://images.unsplash.com/photo-1596040033229-a9821ebd058d?q=80&w=2070&auto=format&fit=crop"
+          alt="Spices background"
           className="w-full h-full object-cover opacity-20"
           referrerPolicy="no-referrer"
         />
@@ -45,16 +49,18 @@ export default function Hero() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={() => scrollTo("products")}
               className="px-8 py-4 bg-spice-hot text-white rounded-full font-semibold tracking-wide shadow-lg shadow-spice-hot/20 hover:bg-spice-extra transition-colors"
             >
-              EXPLORE FLAVORS
+              SHOP NOW
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={() => scrollTo("ingredients")}
               className="px-8 py-4 border border-zinc-200 rounded-full font-semibold tracking-wide hover:bg-zinc-50 transition-colors"
             >
-              OUR PROCESS
+              OUR INGREDIENTS
             </motion.button>
           </div>
         </motion.div>
@@ -71,27 +77,27 @@ export default function Hero() {
           >
             {/* Floating Jar Mockup */}
             <div className="absolute inset-0 bg-spice-hot/10 rounded-full blur-3xl animate-pulse" />
-            <img 
-              src="https://images.unsplash.com/photo-1589113103503-4965503c8452?q=80&w=1974&auto=format&fit=crop" 
-              alt="Pickle Jar" 
+            <img
+              src="https://images.unsplash.com/photo-1589113103503-4965503c8452?q=80&w=1974&auto=format&fit=crop"
+              alt="Pickle Jar"
               className="w-full h-full object-contain drop-shadow-2xl relative z-10 rounded-2xl"
               referrerPolicy="no-referrer"
             />
-            
+
             {/* Floating Spices */}
-            <motion.div 
+            <motion.div
               animate={{ y: [0, -20, 0] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               className="absolute -top-10 -right-10 w-24 h-24 z-20"
             >
-              <img src="https://picsum.photos/seed/chili/200/200" alt="Chili" className="w-full h-full object-contain rounded-full border-4 border-white shadow-xl" referrerPolicy="no-referrer" />
+              <img src="https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?q=80&w=200&auto=format&fit=crop" alt="Chili" className="w-full h-full object-cover rounded-full border-4 border-white shadow-xl" referrerPolicy="no-referrer" />
             </motion.div>
-            <motion.div 
+            <motion.div
               animate={{ y: [0, 20, 0] }}
               transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
               className="absolute -bottom-10 -left-10 w-20 h-20 z-20"
             >
-              <img src="https://picsum.photos/seed/garlic/200/200" alt="Garlic" className="w-full h-full object-contain rounded-full border-4 border-white shadow-xl" referrerPolicy="no-referrer" />
+              <img src="https://images.unsplash.com/photo-1615485242231-80781a24739f?q=80&w=200&auto=format&fit=crop" alt="Gooseberry" className="w-full h-full object-cover rounded-full border-4 border-white shadow-xl" referrerPolicy="no-referrer" />
             </motion.div>
           </motion.div>
         </motion.div>
